@@ -4,8 +4,15 @@ import { useState } from "react";
 
 type Metodo = "mercadopago" | "transferencia";
 
-export default function FormularioCompra({ tipo, slug }: { tipo: "curso" | "kit"; slug: string }) {
-  const [metodo, setMetodo] = useState<Metodo>("mercadopago");
+type Props = {
+  tipo: "curso" | "kit";
+  slug: string;
+  /** Si las credenciales de Mercado Pago no están cargadas, esa opción no se ofrece. */
+  mpDisponible: boolean;
+};
+
+export default function FormularioCompra({ tipo, slug, mpDisponible }: Props) {
+  const [metodo, setMetodo] = useState<Metodo>(mpDisponible ? "mercadopago" : "transferencia");
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -95,7 +102,11 @@ export default function FormularioCompra({ tipo, slug }: { tipo: "curso" | "kit"
         <div className="mt-3 space-y-3">
           {(
             [
-              ["mercadopago", "Mercado Pago", "Tarjeta, débito o dinero en cuenta. El material te llega en minutos."],
+              ...(mpDisponible
+                ? ([
+                    ["mercadopago", "Mercado Pago", "Tarjeta, débito o dinero en cuenta. El material te llega en minutos."],
+                  ] as const)
+                : []),
               ["transferencia", "Transferencia bancaria", "Te damos el CBU y nos mandás el comprobante. Lo confirmamos el mismo día."],
             ] as const
           ).map(([valor, titulo, texto]) => (

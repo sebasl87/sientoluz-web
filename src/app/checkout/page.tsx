@@ -24,13 +24,15 @@ export default async function Checkout({ searchParams }: { searchParams: Params 
 
   if (!item) notFound();
 
+  const mpDisponible = Boolean(process.env.MP_ACCESS_TOKEN && process.env.MP_WEBHOOK_SECRET);
+
   return (
     <div className="mx-auto max-w-4xl px-5 py-16">
       <p className="eyebrow">Último paso</p>
       <h1 className="mt-3 text-3xl">Tu compra</h1>
 
       <div className="mt-10 grid gap-10 md:grid-cols-[1fr_0.8fr]">
-        <FormularioCompra tipo={item.tipo} slug={item.slug} />
+        <FormularioCompra tipo={item.tipo} slug={item.slug} mpDisponible={mpDisponible} />
 
         <aside className="order-first rounded-sm border border-lavanda bg-white/40 p-6 md:order-last md:sticky md:top-24 md:self-start">
           <h2 className="text-sm">{item.nombre}</h2>

@@ -29,6 +29,12 @@ export async function POST(req: Request) {
   if (!["curso", "kit"].includes(cuerpo.tipo) || !["mercadopago", "transferencia"].includes(cuerpo.metodo)) {
     return NextResponse.json({ error: "Pedido inválido." }, { status: 400 });
   }
+  if (cuerpo.metodo === "mercadopago" && !(process.env.MP_ACCESS_TOKEN && process.env.MP_WEBHOOK_SECRET)) {
+    return NextResponse.json(
+      { error: "Mercado Pago no está disponible ahora. Elegí transferencia." },
+      { status: 400 }
+    );
+  }
 
   const db = supabaseServidor();
   const tabla = cuerpo.tipo === "kit" ? "kits" : "cursos";
