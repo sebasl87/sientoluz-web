@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
+import { entregar } from "@/lib/entregar";
 import { supabaseServidor } from "@/lib/supabase";
 
 export const runtime = "nodejs";
@@ -9,7 +10,7 @@ export const dynamic = "force-dynamic";
  * Mercado Pago avisa acá cuando cambia un pago.
  * 1. Valida la firma (x-signature) para descartar avisos falsos.
  * 2. Consulta el pago real a la API de MP (nunca confía en el body).
- * 3. Si está aprobado, marca la orden pagada y le avisa a n8n para que entregue.
+ * 3. Si está aprobado, marca la orden pagada y ejecuta la entrega completa.
  */
 function firmaValida(req: Request, dataId: string) {
   const secreto = process.env.MP_WEBHOOK_SECRET;
@@ -81,18 +82,14 @@ export async function POST(req: Request) {
     .update({ estado: "pagado", mp_payment_id: String(pago.id), pagado_en: new Date().toISOString() })
     .eq("id", orden.id);
 
-  // Fase 3: n8n arma el PDF con marca de agua, manda el mail y el certificado.
-  if (process.env.N8N_WEBHOOK_URL) {
-    await fetch(process.env.N8N_WEBHOOK_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.N8N_WEBHOOK_TOKEN ?? ""}`,
-      },
-      body: JSON.stringify({ orden: orden.numero, orden_id: orden.id }),
-    }).catch(() => {
-      // Si n8n está caído, la orden ya quedó 'pagado': el flujo la reintenta.
-    });
+  // La entrega corre acá mismo: estampa los PDFs, genera certificados,
+  // sube todo, firma links y manda el mail. Si falla, la orden ya quedó
+  // en 'pagado' y el /admin la muestra con el botón Reintentar — el
+  // cliente nunca pierde la compra, a lo sumo espera unos minutos.
+  try {
+    await entregar(orden.id);
+  } catch (err) {
+    console.error(`[webhook MP] orden ${orden.numero}: pago ok, entrega falló:`, err);
   }
 
   return NextResponse.json({ ok: true });

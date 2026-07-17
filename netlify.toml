@@ -1,0 +1,50 @@
+# ─────────────────────────────────────────────────────────────
+# SientoLuz · Netlify
+# El runtime de Next.js lo instala Netlify solo al detectar el
+# framework. No hace falta declarar el plugin.
+# ─────────────────────────────────────────────────────────────
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  # Next 15 pide Node 20+. Sin fijarlo, Netlify puede elegir otro.
+  NODE_VERSION = "20"
+  NEXT_TELEMETRY_DISABLED = "1"
+
+# El panel no se indexa nunca.
+[[headers]]
+  for = "/admin/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    X-Frame-Options = "SAMEORIGIN"
+
+# ── Redirecciones de dominio ──
+# El dominio principal es sientoluz.com. El .com.ar y el www redirigen.
+# OJO: los dominios se agregan primero en el panel de Netlify
+# (Domain management), estas reglas solas no alcanzan.
+
+[[redirects]]
+  from = "https://www.sientoluz.com/*"
+  to = "https://sientoluz.com/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "https://sientoluz.com.ar/*"
+  to = "https://sientoluz.com/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "https://www.sientoluz.com.ar/*"
+  to = "https://sientoluz.com/:splat"
+  status = 301
+  force = true
