@@ -8,21 +8,27 @@ export default function SobreMi() {
       <p className="eyebrow">Quién está del otro lado</p>
       <h1 className="mt-3 text-3xl">Sobre mí</h1>
 
-      {/* TODO: reemplazar por el texto real antes de publicar. */}
       <div className="mt-8 space-y-5 leading-relaxed text-noche/80">
         <p>
-          SientoLuz nació en pandemia, cuando muchas de nosotras necesitábamos algo a
-          lo que agarrarnos. Empezó como talleres sueltos por WhatsApp y terminó siendo
-          una comunidad.
+          Practico numerología, péndulo y trabajo energético desde 2010: primero por
+          necesidad propia, después porque no pude parar de estudiar. Me formé en
+          reiki, sanación arcturiana y otras técnicas, y con los años tomé cursos que
+          fui desarmando y volviendo a armar a mi manera. Lo que hoy son los talleres
+          de SientoLuz no es una copia de lo que aprendí: es eso, pasado por mi
+          impronta.
         </p>
         <p>
-          Hoy vuelve con los mismos contenidos, revisados y ampliados, y con una idea
-          que no cambió: esto no es magia, es trabajo. Yo te acompaño, pero lo hacés vos.
+          En la pandemia me nació la necesidad de compartirlo. Empezó como talleres
+          sueltos por WhatsApp y terminó siendo una comunidad. Hoy SientoLuz vuelve
+          con esos mismos contenidos, revisados y ampliados, y con la misma idea de
+          siempre: yo no vengo a darte soluciones mágicas, vengo a compartir luz y
+          herramientas para que armes tu propia experiencia. Esto no es magia, es
+          trabajo. Yo te acompaño, pero lo hacés vos.
         </p>
       </div>
 
       <p className="ritual mt-10">
-        Tu fecha de nacimiento guarda un mapa: aprendamos a leerlo juntas.
+        Tu fecha de nacimiento guarda un mapa: aprendamos a leerlo juntos.
       </p>
 
       <Separador className="my-12" />

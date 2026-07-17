@@ -1,5 +1,5 @@
-import Image from "next/image";
 import Link from "next/link";
+import Espiral from "./Espiral";
 
 const links = [
   { href: "/cursos", texto: "Cursos" },
@@ -9,24 +9,20 @@ const links = [
 
 export default function Header() {
   return (
-    <header className="sticky top-0 z-40 border-b border-lavanda/60 bg-crema/85 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-crema/10 bg-noche/95 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
-        <Link href="/" aria-label="SientoLuz · inicio">
-          <Image
-            src="/marca/logo-horizontal-color.png"
-            alt="SientoLuz"
-            width={392}
-            height={126}
-            priority
-            className="h-9 w-auto"
-          />
+        <Link href="/" aria-label="SientoLuz · inicio" className="flex items-center gap-2.5">
+          <Espiral variante="crema" grosor={9} className="h-9 w-9" />
+          <span className="font-titulo text-base font-light tracking-[0.3em] text-crema">
+            SIENTOLUZ
+          </span>
         </Link>
         <nav className="flex items-center gap-6">
           {links.map((l) => (
             <Link
               key={l.href}
               href={l.href}
-              className="font-titulo text-xs tracking-[0.2em] uppercase text-noche/70 transition-colors hover:text-amatista"
+              className="font-titulo text-xs tracking-[0.2em] uppercase text-crema/70 transition-colors hover:text-jade"
             >
               {l.texto}
             </Link>
