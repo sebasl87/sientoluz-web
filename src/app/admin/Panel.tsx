@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { precio } from "@/lib/formato";
@@ -149,6 +150,22 @@ export default function Panel({
           {aviso.texto}
         </p>
       )}
+
+      <section className="mb-8 rounded-sm border border-lavanda bg-white/50 p-4">
+        <p className="text-xs uppercase tracking-widest text-noche/45">Herramientas</p>
+        <div className="mt-3 flex items-center justify-between gap-3">
+          <div>
+            <p className="font-titulo text-base">Generador de ganchos</p>
+            <p className="text-sm text-noche/60">Abrilo desde la extranet para usarlo después del login.</p>
+          </div>
+          <Link
+            href="/admin/ganchos"
+            className="shrink-0 rounded-sm bg-amatista px-4 py-2.5 text-sm text-white transition-opacity hover:opacity-90"
+          >
+            Abrir
+          </Link>
+        </div>
+      </section>
 
       {/* ── Lo más urgente: cobraste y no entregaste ── */}
       {trabadas.length > 0 && (
