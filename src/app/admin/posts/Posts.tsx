@@ -2,7 +2,63 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { artAUtcIso, utcIsoAArtLocal, enFranjaDeCron, formatoArt } from "@/lib/social/horario";
+import { artAUtcIso, utcIsoAArtLocal, horariosDeCron, formatoArt } from "@/lib/social/horario";
+
+const HORARIOS_CRON = horariosDeCron();
+
+/** Fecha + hora, restringido a los horarios en que corre el cron (para no programar un post que nunca se dispara). */
+function SelectorHorario({
+  valor,
+  onChange,
+}: {
+  valor: string; // "AAAA-MM-DDTHH:mm"
+  onChange: (valor: string) => void;
+}) {
+  const [fecha, setFecha] = useState(valor.split("T")[0] ?? "");
+  const [hora, setHora] = useState(valor.split("T")[1] ?? "");
+
+  useEffect(() => {
+    const [f, h] = valor.split("T");
+    setFecha(f ?? "");
+    setHora(h ?? "");
+  }, [valor]);
+
+  function commit(f: string, h: string) {
+    setFecha(f);
+    setHora(h);
+    onChange(f && h ? `${f}T${h}` : "");
+  }
+
+  // Si el valor actual tiene una hora que no es de las del cron (p. ej. un
+  // post viejo cargado antes de este selector), se ofrece igual para no
+  // perderla silenciosamente al editar.
+  const opciones = hora && !HORARIOS_CRON.includes(hora) ? [hora, ...HORARIOS_CRON] : HORARIOS_CRON;
+
+  return (
+    <div className="flex gap-2">
+      <input
+        type="date"
+        value={fecha}
+        onChange={(e) => commit(e.target.value, hora)}
+        className="w-1/2 rounded-sm border border-lavanda bg-white/80 p-2 text-xs"
+      />
+      <select
+        value={hora}
+        onChange={(e) => commit(fecha, e.target.value)}
+        className="w-1/2 rounded-sm border border-lavanda bg-white/80 p-2 text-xs"
+      >
+        <option value="" disabled>
+          Hora
+        </option>
+        {opciones.map((h) => (
+          <option key={h} value={h}>
+            {h} ART{!HORARIOS_CRON.includes(h) ? " (fuera de franja)" : ""}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
 
 type Borrador = {
   id: string;
@@ -382,7 +438,6 @@ export default function Posts({
 
               <ul className="space-y-3">
                 {borradores.map((b) => {
-                  const fueraDeFranja = b.fechaHora !== "" && !enFranjaDeCron(b.fechaHora);
                   return (
                     <li key={b.id} className="rounded-sm border border-lavanda bg-white/60 p-3">
                       <div className="flex gap-3">
@@ -407,17 +462,10 @@ export default function Posts({
                             placeholder="#hashtags (opcional)"
                             className="w-full rounded-sm border border-lavanda bg-white/80 p-2 text-xs"
                           />
-                          <input
-                            type="datetime-local"
-                            value={b.fechaHora}
-                            onChange={(e) => actualizarBorrador(b.id, { fechaHora: e.target.value })}
-                            className="w-full rounded-sm border border-lavanda bg-white/80 p-2 text-xs"
+                          <SelectorHorario
+                            valor={b.fechaHora}
+                            onChange={(v) => actualizarBorrador(b.id, { fechaHora: v })}
                           />
-                          {fueraDeFranja && (
-                            <p className="text-xs text-amber-700">
-                              Fuera de franja 08–11 / 15–20 ART: se publica en la próxima corrida.
-                            </p>
-                          )}
                           <div className="flex flex-wrap items-center gap-3 text-xs">
                             <label className="flex items-center gap-1.5">
                               <input
@@ -652,12 +700,7 @@ function Tarjeta({
             placeholder="#hashtags"
             className="w-full rounded-sm border border-lavanda bg-white p-2 text-xs"
           />
-          <input
-            type="datetime-local"
-            value={ef}
-            onChange={(e) => seteF(e.target.value)}
-            className="w-full rounded-sm border border-lavanda bg-white p-2 text-xs"
-          />
+          <SelectorHorario valor={ef} onChange={seteF} />
           <div className="flex gap-4 text-xs">
             <label className="flex items-center gap-1.5">
               <input type="checkbox" checked={efb} onChange={(e) => seteFb(e.target.checked)} />

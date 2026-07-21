@@ -27,10 +27,16 @@ export function utcIsoAArtLocal(iso: string): string {
   )}:${p(d.getUTCMinutes())}`;
 }
 
-/** Las franjas en que corre el cron: 08–11 y 15–20 ART. */
-export function enFranjaDeCron(valorLocal: string): boolean {
-  const hora = Number(valorLocal.split("T")[1]?.split(":")[0] ?? "-1");
-  return (hora >= 8 && hora < 12) || (hora >= 15 && hora < 21);
+/**
+ * "HH:mm" de cada corrida del cron (cada 15 min, dentro de 08–11 y 15–20
+ * ART). Se usa para que el selector de horario del admin solo ofrezca
+ * horarios en los que el post realmente va a salir.
+ */
+export function horariosDeCron(): string[] {
+  const horas = [8, 9, 10, 11, 15, 16, 17, 18, 19, 20];
+  const minutos = [0, 15, 30, 45];
+  const p = (n: number) => String(n).padStart(2, "0");
+  return horas.flatMap((h) => minutos.map((m) => `${p(h)}:${p(m)}`));
 }
 
 export function formatoArt(iso: string): string {
