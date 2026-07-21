@@ -165,6 +165,18 @@ export default function Panel({
             Abrir
           </Link>
         </div>
+        <div className="mt-3 flex items-center justify-between gap-3 border-t border-lavanda/60 pt-3">
+          <div>
+            <p className="font-titulo text-base">Posts programados</p>
+            <p className="text-sm text-noche/60">Cargar imagen, copy y fecha para Facebook + Instagram.</p>
+          </div>
+          <Link
+            href="/admin/posts"
+            className="shrink-0 rounded-sm bg-amatista px-4 py-2.5 text-sm text-white transition-opacity hover:opacity-90"
+          >
+            Abrir
+          </Link>
+        </div>
       </section>
 
       {/* ── Lo más urgente: cobraste y no entregaste ── */}

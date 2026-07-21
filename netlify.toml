@@ -48,3 +48,10 @@
   to = "https://sientoluz.com/:splat"
   status = 301
   force = true
+
+# ── Publicador de posts (FB + IG) ──
+# Netlify Function aparte del árbol de Next (netlify/functions/), no toca
+# nada de src/app/api — el webhook de Mercado Pago sigue siendo una route
+# de Next normal, deployada igual que siempre.
+[functions]
+  directory = "netlify/functions"
