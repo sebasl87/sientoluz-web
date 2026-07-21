@@ -10,7 +10,7 @@
 
 [build.environment]
   # Next 15 pide Node 20+. Sin fijarlo, Netlify puede elegir otro.
-  NODE_VERSION = "20"
+  NODE_VERSION = "22"
   NEXT_TELEMETRY_DISABLED = "1"
 
 # El panel no se indexa nunca.

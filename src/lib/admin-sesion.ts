@@ -108,8 +108,16 @@ export async function cerrarSesion() {
   (await cookies()).delete(COOKIE);
 }
 
-/** El email del admin si hay sesión válida, o null. */
+/**
+ * El email del admin si hay sesión válida, o null.
+ *
+ * En dev (`next dev`, NODE_ENV !== "production") se salta la validación:
+ * el magic link depende de ADMIN_SECRET/RESEND_API_KEY/NEXT_PUBLIC_SITE_URL
+ * apuntando a localhost, y montar todo eso solo para probar el panel no vale
+ * la pena. En build de producción esta rama no existe.
+ */
 export async function sesion(): Promise<string | null> {
+  if (process.env.NODE_ENV !== "production") return emailAdmin();
   return verificar("sesion", (await cookies()).get(COOKIE)?.value);
 }
 
