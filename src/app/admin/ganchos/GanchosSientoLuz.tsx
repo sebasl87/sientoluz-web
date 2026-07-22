@@ -1,51 +1,61 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 /* ============================================================
    SientoLuz · Generador de ganchos (3 en 1)
-   - Solapa NOMBRE → Número de Alma        (gancho 1)
-   - Solapa FECHA  → Talento (gancho 2) + Vibración Anual (gancho 3)
+   Solapa NOMBRE → Número de Alma (gancho 1)
+   Solapa FECHA  → Talento (gancho 2) + Vibración Anual (gancho 3)
    Cálculos fieles al sistema del curso. Sin dependencias ni red.
-
-   Para el extranet Next.js:
-   1) Pegá este archivo como app/(admin)/ganchos/page.tsx
-      (o dentro de la carpeta que ya protege tu magic-link HMAC).
-   2) Agregá  'use client'  en la primera línea.
-   3) Listo: hereda tu auth, no necesita nada más.
+   Colocá este archivo junto a tu page.tsx del panel.
    ============================================================ */
 
-/* ---------- Cálculos ---------- */
-const VAL = { a: 1, e: 5, i: 9, o: 6, u: 3 };
-const sumDig = (n) => String(n).split("").reduce((a, d) => a + +d, 0);
-const clean = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-const reduceMaster = (n) => { while (n > 9 && ![11, 22, 33].includes(n)) n = sumDig(n); return n; };
-const reduce9 = (n) => { while (n > 9) n = sumDig(n); return n; };
+/* ---------- Tipos ---------- */
+type Voc = { ch: string; v: number };
+type Alma = { alma: number; bruto: number; voc: Voc[] };
+type Fecha = {
+  talento: number; vib: number;
+  camino: number; caminoTotal: number; karmico: number | null;
+  dd: number; mm: number; anioCumple: number;
+};
+type Lead = { k: string; chip: string; nm: string; u: string };
+type Mode = "camino" | "talento" | "vibra" | "ambos";
 
-function calcAlma(nombre) {
+/* ---------- Cálculos ---------- */
+const VAL: Record<string, number> = { a: 1, e: 5, i: 9, o: 6, u: 3 };
+const sumDig = (n: number): number => String(n).split("").reduce((a, d) => a + +d, 0);
+const clean = (s: string): string => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const reduceMaster = (n: number): number => { while (n > 9 && ![11, 22, 33].includes(n)) n = sumDig(n); return n; };
+const reduce9 = (n: number): number => { while (n > 9) n = sumDig(n); return n; };
+
+function calcAlma(nombre: string): Alma {
   const letras = clean(nombre).replace(/[^a-z ]/g, "");
-  const voc = [];
+  const voc: Voc[] = [];
   for (const ch of letras) if (VAL[ch] !== undefined) voc.push({ ch: ch.toUpperCase(), v: VAL[ch] });
   const bruto = voc.reduce((a, x) => a + x.v, 0);
   return { alma: reduceMaster(bruto), bruto, voc };
 }
-function calcFecha(fechaStr) {
-  const [, mm, dd] = fechaStr.split("-").map(Number);
+function calcFecha(fechaStr: string): Fecha {
+  const [yy, mm, dd] = fechaStr.split("-").map(Number);
   const talento = reduce9(dd);
   const hoy = new Date();
   const cumpleEste = new Date(hoy.getFullYear(), mm - 1, dd);
   const anioCumple = hoy >= cumpleEste ? hoy.getFullYear() : hoy.getFullYear() - 1;
   const vib = reduce9(sumDig(dd) + sumDig(mm) + sumDig(anioCumple));
-  return { talento, vib, dd, mm, anioCumple };
+  // Camino de Vida = fecha de nacimiento completa (en la carta: Karma)
+  const caminoTotal = sumDig(dd) + sumDig(mm) + sumDig(yy);
+  const karmico = [13, 14, 16, 19].includes(caminoTotal) ? caminoTotal : null;
+  const camino = [11, 22, 33].includes(caminoTotal) ? caminoTotal : reduce9(caminoTotal);
+  return { talento, vib, camino, caminoTotal, karmico, dd, mm, anioCumple };
 }
-const primerNombre = (s) => {
+const primerNombre = (s: string): string => {
   if (!s) return "";
   const t = s.trim().split(/\s+/);
   return t[0] ? t[0].charAt(0).toUpperCase() + t[0].slice(1) : s;
 };
 
 /* ---------- Textos fieles al curso ---------- */
-const ALMA = {
+const ALMA: Record<number, string> = {
   1: "Sos un alma de líder natural. Tu Yo interno necesita autonomía, animarse y que se reconozca lo que hacés. Viniste a ser más, a confiar en vos y a no depender.",
   2: "Tu alma busca armonía y paz por sobre todo. Sos emotiva, tierna, romántica y muy creativa: no necesitás brillar, necesitás vivir tranquila y en vínculo.",
   3: "Tu alma se expresa. Es sensible, alegre y comunicativa: viniste a disfrutar los momentos y a compartir con el mundo eso que sentís y creás.",
@@ -59,7 +69,7 @@ const ALMA = {
   22: "Tenés un Número Maestro: el 22. Un alma de vibración altísima, la del gran constructor: capaz de materializar cosas grandes al servicio de muchos.",
   33: "Tenés un Número Maestro: el 33. Un alma de vibración muy alta, ligada al amor y a la enseñanza; un canal para acompañar y elevar a otros.",
 };
-const TALENTO = {
+const TALENTO: Record<number, string> = {
   1: "iniciar, arrancar, empuje y fortaleza para atravesar cualquier obstáculo",
   2: "conectar con la intuición, mucha empatía y persistencia para superar lo que venga",
   3: "sos espontánea y muy magnética; vencés los obstáculos con tus propias aptitudes",
@@ -70,7 +80,7 @@ const TALENTO = {
   8: "autosuficiente: hacés de lo más mínimo un éxito, gran administradora",
   9: "muy humana: das mucho y vivís alineada a tus principios",
 };
-const VIBRA = {
+const VIBRA: Record<number, string> = {
   1: "un año para empezar, iniciar todo lo que te propongas y ser más independiente",
   2: "un año para escuchar tu intuición, servir, cooperar y no bajar los brazos",
   3: "un año para disfrutar, expresarte, conectar con lo social y hacer cursos cortos",
@@ -82,8 +92,33 @@ const VIBRA = {
   9: "un año para soltar, sanar y cerrar: termina un ciclo de 9 años y viene algo mejor",
 };
 
-/* ---------- Banco de mensajes (recombinable) ---------- */
-const pick = (a) => a[Math.floor(Math.random() * a.length)];
+/* Camino de Vida — "dónde está tu fuerza" (aspectos positivos del número) */
+const CAM_FUERZA: Record<number, string> = {
+  1: "tu energía es altísima. Te animás, iniciás, creás. Tenés mucha voluntad y ves más allá de lo que ve el resto",
+  2: "sos diplomática, receptiva y mediadora. Tenés una conexión finísima con lo intuitivo y sabés unir a la gente",
+  3: "la expresión es tuya: creatividad, sensibilidad y alegría. Sabés disfrutar los momentos y contagiarlos",
+  4: "sos la gran constructora: paciente, disciplinada, organizada. Te lleva trabajo concretar, pero lo lográs",
+  5: "libertad y movimiento. Flexible, independiente, magnética: sabés usar tus encantos y reinventarte",
+  6: "perdonás y sabés esperar. Te aceptás y aceptás al resto, con compasión y una enorme vocación de servicio",
+  7: "profundidad. Sabiduría interna, análisis, meditación: te hacés las preguntas grandes y las sostenés",
+  8: "autosuficiente y ambiciosa del mejor modo: hacés de lo más mínimo un éxito y administrás como pocas",
+  9: "humanitaria, compasiva y sabia. Carismática, y das sin esperar nada a cambio",
+};
+/* Camino de Vida — "las trampas que se repiten" (texto de Karma del curso) */
+const CAM_LECCION: Record<number, string> = {
+  1: "aprender a trabajar la independencia, ser más individualista y saber administrar tu economía sin depender del otro",
+  2: "servir a los demás: vivir para el otro, ayudando a que evolucione y sane",
+  3: "aprender a expresarte, de la manera que sea, en aquello donde sentís que tenés talento",
+  4: "aprender a administrarte de forma práctica y eficiente. Poner en práctica la organización y la disciplina hasta ver resultados",
+  5: "el amor. No encontrar a la persona adecuada, o sentirte sola estando acompañada. Encontrar ahí el equilibrio",
+  6: "aprender a no buscar el conflicto y a afrontar las cosas de otro modo. Formar una familia en armonía",
+  7: "encontrar en la vida un lugar para vos: en el mundo, en el trabajo, en tu hogar, en tu familia",
+  8: "la vida te va a poner siempre a prueba. Es una vida de muchos aprendizajes: comprender que todo lo que hacemos tiene consecuencias",
+  9: "el sentimiento de rechazo o de no ser comprendida por tu círculo más cercano. Tu búsqueda va a ser el reconocimiento",
+};
+
+/* ---------- Banco de mensajes ---------- */
+const pick = <T,>(a: T[]): T => a[Math.floor(Math.random() * a.length)];
 const CIERRE = [
   "Cualquier cosa quedo por acá 💜",
   "Si querés que te cuente cómo es el curso, escribime 'quiero' y te paso todo 🌿",
@@ -91,7 +126,6 @@ const CIERRE = [
   "Te mando un abrazo de luz ✨",
   "Si te dieron ganas de seguir, avisame y vemos juntas 💫",
 ];
-
 const SAL_ALMA = [
   "Hola {n} 🌙 Me quedé con ganas de hacer tu número apenas leí tu mensaje.",
   "{n}, gracias por escribir 💜 Fui a las vocales de tu nombre y esto encontré.",
@@ -111,7 +145,6 @@ const PUENTE_ALMA = [
   "Tu Alma es una sola pieza del mapa 🗺️ En el curso aprendés a armar tu Carta completa y la de quien quieras: tus hijos, tu pareja, tus amigas.",
   "Si esto te resonó, imaginate tu Carta entera 🌙 Es lo que ves en el curso: te llevás todo el material para leerte y leer a otros.",
 ];
-
 const SAL_NAME = [
   "Hola {n} ☀️ Miré tu fecha y esto es lo que salió.",
   "{n}, gracias por tu fecha 💛 Tu día de nacimiento habla, y bastante.",
@@ -124,6 +157,23 @@ const SAL_ANON = [
   "¡Hola! ✨ Tu fecha me contó algo lindo.",
   "Acá va lo tuyo 🌿 Con tu fecha ya tengo el número.",
 ];
+const SAL_CAM = [
+  "Hola {n} 💜 Acá va tu Camino de Vida, como prometí.",
+  "{n}, gracias por dejarme tu fecha 🌙 Ya saqué tu Camino de Vida.",
+  "Hola {n} ✨ Sumé tu fecha completa y este es el terreno que te tocó caminar.",
+  "Llegué, {n} 🌿 Este es tu Camino de Vida.",
+];
+const SAL_CAM_ANON = [
+  "¡Hola! 💜 Acá va tu Camino de Vida, como prometí.",
+  "Gracias por dejarme tu fecha 🌙 Ya saqué tu Camino de Vida.",
+  "¡Hola! ✨ Sumé tu fecha completa y este es el terreno que te tocó caminar.",
+  "Llegué 🌿 Este es tu Camino de Vida.",
+];
+const REV_CAM = [
+  "Tu Camino de Vida es el {c}.",
+  "El número que se te viene repitiendo es el {c}.",
+  "Tu fecha completa da {c}: ese es tu Camino de Vida.",
+];
 const REV_TAL = ["Por dónde brillás es el {t}.", "Tu don vibra en {t}.", "Tu Talento es un {t}."];
 const REV_VIB = ["La energía de tu año está en {v}.", "Tu año personal es un {v}.", "Tu Vibración Anual es {v}."];
 const PUENTE_F = [
@@ -133,23 +183,40 @@ const PUENTE_F = [
   "Tu fecha ya dijo un montón ✨ y todavía falta lo que dice tu nombre. La Carta completa es el corazón del curso de Numerología.",
 ];
 
-function msgAlma(nombre, alma) {
+function msgAlma(nombre: string, alma: number): string {
   const n = primerNombre(nombre);
   const s = pick(SAL_ALMA).replace(/{n}/g, n);
-  const r = pick(REV_ALMA).replace(/{a}/g, alma);
-  const interp = ALMA[alma] || ALMA[reduce9(alma)];
+  const r = pick(REV_ALMA).replace(/{a}/g, String(alma));
+  const interp = ALMA[alma] ?? ALMA[reduce9(alma)];
   return `${s}\n\n${r}\n\n${interp}\n\n${pick(PUENTE_ALMA)}\n\n${pick(CIERRE)}`;
 }
-function msgFecha(nombre, res, mode) {
+function msgFecha(nombre: string, res: Fecha, mode: Mode): string {
   const n = primerNombre(nombre);
-  const s = (n ? pick(SAL_NAME) : pick(SAL_ANON)).replace(/{n}/g, n);
-  const bloques = [];
+  const cam = mode === "camino";
+  const s = (cam
+          ? (n ? pick(SAL_CAM) : pick(SAL_CAM_ANON))
+          : (n ? pick(SAL_NAME) : pick(SAL_ANON))
+  ).replace(/{n}/g, n);
+  const bloques: string[] = [];
+  if (cam) {
+    const base = reduce9(res.camino);
+    bloques.push(pick(REV_CAM).replace(/{c}/g, String(res.camino)));
+    bloques.push(`Dónde está tu fuerza: ${CAM_FUERZA[base]}.`);
+    bloques.push(`Lo que se te repite hasta que lo aprendas: ${CAM_LECCION[base]}.`);
+    if ([11, 22, 33].includes(res.camino)) {
+      bloques.push(`Y algo más: el ${res.camino} es un Número Maestro, de vibración muy alta. Para poder usarlo, primero se integra la energía del ${base}.`);
+    }
+    if (res.karmico) {
+      bloques.push("Tu número trae además una capa extra que no se explica en dos líneas. Eso se ve entero en la carta completa.");
+    }
+    bloques.push("(En la carta numerológica lo vas a encontrar como tu número de Karma: es el mismo número, con el nombre técnico.)");
+  }
   if (mode === "talento" || mode === "ambos") {
-    bloques.push(pick(REV_TAL).replace(/{t}/g, res.talento));
+    bloques.push(pick(REV_TAL).replace(/{t}/g, String(res.talento)));
     bloques.push(`Tu don (Talento ${res.talento}): ${TALENTO[res.talento]}.`);
   }
   if (mode === "vibra" || mode === "ambos") {
-    bloques.push(pick(REV_VIB).replace(/{v}/g, res.vib));
+    bloques.push(pick(REV_VIB).replace(/{v}/g, String(res.vib)));
     bloques.push(`Tu año (Vibración ${res.vib}): ${VIBRA[res.vib]}.`);
   }
   return `${s}\n\n${bloques.join("\n\n")}\n\n${pick(PUENTE_F)}\n\n${pick(CIERRE)}`;
@@ -157,24 +224,53 @@ function msgFecha(nombre, res, mode) {
 
 const MESES = ["", "ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 
+/* ---------- Copiado robusto ----------
+   navigator.clipboard sólo existe en contexto seguro (HTTPS o localhost).
+   Si no está, caemos a un textarea temporal + execCommand.            */
+async function copiar(texto: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(texto);
+      return true;
+    }
+  } catch { /* seguimos al fallback */ }
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = texto;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.top = "0";
+    ta.style.left = "0";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    ta.setSelectionRange(0, ta.value.length); // iOS
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
 /* ============================================================ */
 export default function GanchosSientoLuz() {
-  const [tab, setTab] = useState("nombre");
-  // nombre
+  const [tab, setTab] = useState<"nombre" | "fecha">("nombre");
   const [nombre, setNombre] = useState("");
   const [userN, setUserN] = useState("");
-  const [alma, setAlma] = useState(null);
-  // fecha
+  const [alma, setAlma] = useState<Alma | null>(null);
   const [fecha, setFecha] = useState("");
   const [fNombre, setFNombre] = useState("");
   const [userF, setUserF] = useState("");
-  const [fres, setFres] = useState(null);
-  const [mode, setMode] = useState("talento");
-  // salida
+  const [fres, setFres] = useState<Fecha | null>(null);
+  const [mode, setMode] = useState<Mode>("camino");
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
-  const [toast, setToast] = useState(false);
-  const [leads, setLeads] = useState([]);
+  const [toast, setToast] = useState("");
+  const [toastOk, setToastOk] = useState(true);
+  const taRef = useRef<HTMLTextAreaElement>(null);
+  const [leads, setLeads] = useState<Lead[]>([]);
 
   const genNombre = () => {
     setErr("");
@@ -185,139 +281,153 @@ export default function GanchosSientoLuz() {
     setMsg(msgAlma(nombre, r.alma));
     setLeads((L) => [{ k: "Alma", chip: `A${r.alma}`, nm: nombre.trim(), u: userN.trim() }, ...L]);
   };
-  const genFecha = (m = mode) => {
+  const genFecha = (m: Mode = mode) => {
     setErr("");
     if (!fecha) { setErr("Elegí la fecha de nacimiento."); return; }
     const r = calcFecha(fecha);
-    setFres(r);
-    setMode(m);
+    setFres(r); setMode(m);
     setMsg(msgFecha(fNombre, r, m));
-    const etq = m === "talento" ? `T${r.talento}` : m === "vibra" ? `A${r.vib}` : `T${r.talento}·A${r.vib}`;
-    setLeads((L) => [{ k: m === "talento" ? "Talento" : m === "vibra" ? "Año" : "Fecha", chip: etq, nm: fNombre.trim() || "(sin nombre)", u: userF.trim() }, ...L]);
+    const etq = m === "camino" ? `C${r.camino}` : m === "talento" ? `T${r.talento}` : m === "vibra" ? `A${r.vib}` : `T${r.talento}·A${r.vib}`;
+    const k = m === "camino" ? "Camino" : m === "talento" ? "Talento" : m === "vibra" ? "Año" : "Fecha";
+    setLeads((L) => [{ k, chip: etq, nm: fNombre.trim() || "(sin nombre)", u: userF.trim() }, ...L]);
   };
   const regen = () => {
     if (tab === "nombre" && alma) setMsg(msgAlma(nombre, alma.alma));
     if (tab === "fecha" && fres) setMsg(msgFecha(fNombre, fres, mode));
   };
+  const aviso = (t: string, ok: boolean) => {
+    setToast(t); setToastOk(ok);
+    setTimeout(() => setToast(""), ok ? 1800 : 4000);
+  };
   const copy = async () => {
-    try { await navigator.clipboard.writeText(msg); } catch (e) {}
-    setToast(true); setTimeout(() => setToast(false), 1600);
+    const ok = await copiar(msg);
+    if (ok) { aviso("¡Copiado! ✨", true); return; }
+    // Último recurso: seleccionamos el texto para que lo copie a mano.
+    taRef.current?.focus();
+    taRef.current?.select();
+    aviso("No pude copiar solo. Te dejé el texto seleccionado: Ctrl/Cmd+C", false);
   };
   const copyLeads = async () => {
     if (!leads.length) return;
     const txt = leads.map((l) => `${l.nm} | ${l.u || "-"} | ${l.k} ${l.chip}`).join("\n");
-    try { await navigator.clipboard.writeText(txt); } catch (e) {}
+    const ok = await copiar(txt);
+    aviso(ok ? "Lista copiada ✨" : "No pude copiar la lista.", ok);
   };
 
   return (
-    <div className="sl">
-      <style>{CSS}</style>
+      <div className="sl">
+        <style>{CSS}</style>
 
-      <header className="sl-head">
-        <div className="sl-moon" />
-        <div className="sl-brand">Siento<b>Luz</b></div>
-      </header>
-      <div className="sl-eyebrow">Generador de ganchos</div>
-      <h1 className="sl-h1">Regalá un número, ganá un lead</h1>
+        <header className="sl-head">
+          <div className="sl-moon" />
+          <div className="sl-brand">Siento<b>Luz</b></div>
+        </header>
+        <div className="sl-eyebrow">Generador de ganchos</div>
+        <h1 className="sl-h1">Regalá un número, ganá un lead</h1>
 
-      <div className="sl-tabs">
-        <button className={"sl-tab" + (tab === "nombre" ? " on" : "")} onClick={() => { setTab("nombre"); setMsg(""); setErr(""); }}>🌙 Nombre → Alma</button>
-        <button className={"sl-tab" + (tab === "fecha" ? " on" : "")} onClick={() => { setTab("fecha"); setMsg(""); setErr(""); }}>☀️ Fecha → Talento + Año</button>
-      </div>
-
-      {/* ---------- SOLAPA NOMBRE ---------- */}
-      {tab === "nombre" && (
-        <div className="sl-panel">
-          <p className="sl-sub">El Alma sale de las vocales del nombre completo (con los dos apellidos), igual que en el curso.</p>
-          <div className="sl-row">
-            <div className="grow"><label>Nombre completo</label>
-              <input value={nombre} onChange={(e) => setNombre(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && genNombre()} placeholder="Ej.: María Luz Gómez Díaz" /></div>
-            <div className="short"><label>@usuario</label>
-              <input value={userN} onChange={(e) => setUserN(e.target.value)} placeholder="@nombre" /></div>
-          </div>
-          <div className="sl-actions">
-            <button className="sl-primary" onClick={genNombre}>Revelar el Alma ✨</button>
-            {err && <span className="sl-err">{err}</span>}
-          </div>
-
-          {alma && (
-            <div className="sl-reveal night">
-              <div className="stars" />
-              <div className="rhead">Número de Alma</div>
-              <div className="rname">{primerNombre(nombre)}</div>
-              <div className="rnum">{alma.alma}<small>número de alma</small></div>
-              <div className="chips">{alma.voc.map((v, i) => <span key={i} className="chip">{v.ch}<b>{v.v}</b></span>)}</div>
-              <div className="rfoot">Suma de vocales: {alma.bruto}{alma.bruto !== alma.alma ? ` → ${alma.alma}` : ""}</div>
-            </div>
-          )}
+        <div className="sl-tabs">
+          <button className={"sl-tab" + (tab === "nombre" ? " on" : "")} onClick={() => { setTab("nombre"); setMsg(""); setErr(""); }}>🌙 Nombre → Alma</button>
+          <button className={"sl-tab" + (tab === "fecha" ? " on" : "")} onClick={() => { setTab("fecha"); setMsg(""); setErr(""); }}>☀️ Fecha → Talento + Año</button>
         </div>
-      )}
 
-      {/* ---------- SOLAPA FECHA ---------- */}
-      {tab === "fecha" && (
-        <div className="sl-panel">
-          <p className="sl-sub">De la fecha salen el <b>Talento</b> (una publi) y la <b>Vibración Anual</b> (otra campaña). Elegí de cuál querés el mensaje.</p>
-          <div className="sl-row">
-            <div className="grow"><label>Fecha de nacimiento</label>
-              <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} /></div>
-            <div className="grow"><label>Nombre (opcional)</label>
-              <input value={fNombre} onChange={(e) => setFNombre(e.target.value)} placeholder="Ej.: María" /></div>
-            <div className="short"><label>@usuario</label>
-              <input value={userF} onChange={(e) => setUserF(e.target.value)} placeholder="@nombre" /></div>
-          </div>
-
-          <div className="sl-seg">
-            <button className={mode === "talento" ? "on" : ""} onClick={() => fres ? genFecha("talento") : setMode("talento")}>Talento</button>
-            <button className={mode === "vibra" ? "on" : ""} onClick={() => fres ? genFecha("vibra") : setMode("vibra")}>Tu año</button>
-            <button className={mode === "ambos" ? "on" : ""} onClick={() => fres ? genFecha("ambos") : setMode("ambos")}>Los dos</button>
-          </div>
-
-          <div className="sl-actions">
-            <button className="sl-primary" onClick={() => genFecha()}>Revelar ✨</button>
-            {err && <span className="sl-err">{err}</span>}
-          </div>
-
-          {fres && (
-            <div className="sl-reveal dawn">
-              <div className="glow" />
-              <div className="rhead">Lo que dice tu fecha</div>
-              <div className="rname">{primerNombre(fNombre) || "Tu energía"}</div>
-              <div className="duo">
-                <div className="card2"><div className="lbl">Talento · tu don</div><div className="big">{fres.talento}</div><div className="cap">por dónde brillás</div></div>
-                <div className="card2"><div className="lbl">Vibración · tu año</div><div className="big">{fres.vib}</div><div className="cap">tu energía ahora</div></div>
+        {tab === "nombre" && (
+            <div className="sl-panel">
+              <p className="sl-sub">El Alma sale de las vocales del nombre completo (con los dos apellidos), igual que en el curso.</p>
+              <div className="sl-row">
+                <div className="grow"><label>Nombre completo</label>
+                  <input value={nombre} onChange={(e) => setNombre(e.target.value)}
+                         onKeyDown={(e) => e.key === "Enter" && genNombre()} placeholder="Ej.: María Luz Gómez Díaz" /></div>
+                <div className="short"><label>@usuario</label>
+                  <input value={userN} onChange={(e) => setUserN(e.target.value)} placeholder="@nombre" /></div>
               </div>
-              <div className="rfoot">Día {fres.dd} → Talento {fres.talento}<br />Último cumple {fres.dd}/{MESES[fres.mm]}/{fres.anioCumple} → Vibración {fres.vib}</div>
+              <div className="sl-actions">
+                <button className="sl-primary" onClick={genNombre}>Revelar el Alma ✨</button>
+                {err && <span className="sl-err">{err}</span>}
+              </div>
+
+              {alma && (
+                  <div className="sl-reveal night">
+                    <div className="stars" />
+                    <div className="rhead">Número de Alma</div>
+                    <div className="rname">{primerNombre(nombre)}</div>
+                    <div className="rnum">{alma.alma}<small>número de alma</small></div>
+                    <div className="chips">{alma.voc.map((v, i) => <span key={i} className="chip">{v.ch}<b>{v.v}</b></span>)}</div>
+                    <div className="rfoot">Suma de vocales: {alma.bruto}{alma.bruto !== alma.alma ? ` → ${alma.alma}` : ""}</div>
+                  </div>
+              )}
             </div>
-          )}
-        </div>
-      )}
+        )}
 
-      {/* ---------- MENSAJE ---------- */}
-      {msg && (
+        {tab === "fecha" && (
+            <div className="sl-panel">
+              <p className="sl-sub">De la fecha salen el <b>Talento</b> (una publi) y la <b>Vibración Anual</b> (otra campaña). Elegí de cuál querés el mensaje.</p>
+              <div className="sl-row">
+                <div className="grow"><label>Fecha de nacimiento</label>
+                  <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} /></div>
+                <div className="grow"><label>Nombre (opcional)</label>
+                  <input value={fNombre} onChange={(e) => setFNombre(e.target.value)} placeholder="Ej.: María" /></div>
+                <div className="short"><label>@usuario</label>
+                  <input value={userF} onChange={(e) => setUserF(e.target.value)} placeholder="@nombre" /></div>
+              </div>
+
+              <div className="sl-seg">
+                <button className={mode === "camino" ? "on" : ""} onClick={() => fres ? genFecha("camino") : setMode("camino")}>Camino de Vida</button>
+                <button className={mode === "talento" ? "on" : ""} onClick={() => fres ? genFecha("talento") : setMode("talento")}>Talento</button>
+                <button className={mode === "vibra" ? "on" : ""} onClick={() => fres ? genFecha("vibra") : setMode("vibra")}>Tu año</button>
+                <button className={mode === "ambos" ? "on" : ""} onClick={() => fres ? genFecha("ambos") : setMode("ambos")}>Los dos</button>
+              </div>
+
+              <div className="sl-actions">
+                <button className="sl-primary" onClick={() => genFecha()}>Revelar ✨</button>
+                {err && <span className="sl-err">{err}</span>}
+              </div>
+
+              {fres && (
+                  <div className="sl-reveal dawn">
+                    <div className="glow" />
+                    <div className="rhead">Lo que dice tu fecha</div>
+                    <div className="rname">{primerNombre(fNombre) || "Tu energía"}</div>
+                    <div className="duo">
+                      <div className="card2"><div className="lbl">Camino de Vida</div><div className="big">{fres.camino}</div><div className="cap">el terreno a caminar</div></div>
+                      <div className="card2"><div className="lbl">Talento · tu don</div><div className="big">{fres.talento}</div><div className="cap">por dónde brillás</div></div>
+                      <div className="card2"><div className="lbl">Vibración · tu año</div><div className="big">{fres.vib}</div><div className="cap">tu energía ahora</div></div>
+                    </div>
+                    <div className="rfoot">
+                      Fecha completa → {fres.caminoTotal} → Camino {fres.camino}<br />
+                      Día {fres.dd} → Talento {fres.talento}<br />
+                      Último cumple {fres.dd}/{MESES[fres.mm]}/{fres.anioCumple} → Vibración {fres.vib}
+                      {fres.karmico && (
+                          <><br /><b style={{ color: "#ffd88c" }}>Número kármico {fres.karmico} — solo para vos: no lo detalles en el mensaje gratuito.</b></>
+                      )}
+                    </div>
+                  </div>
+              )}
+            </div>
+        )}
+
+        {msg && (
+            <div className="sl-panel">
+              <div className="sl-msglbl"><span>Mensaje para el DM</span><span className="cnt">{msg.length} caracteres</span></div>
+              <textarea ref={taRef} readOnly value={msg} onFocus={(e) => e.currentTarget.select()} />
+              <div className="sl-actions">
+                <button className="sl-jade" onClick={copy}>Copiar mensaje</button>
+                <button className="sl-ghost" onClick={regen}>Otra versión</button>
+                {toast && <span className={"sl-toast" + (toastOk ? "" : " bad")}>{toast}</span>}
+              </div>
+            </div>
+        )}
+
         <div className="sl-panel">
-          <div className="sl-msglbl"><span>Mensaje para el DM</span><span className="cnt">{msg.length} caracteres</span></div>
-          <textarea readOnly value={msg} />
-          <div className="sl-actions">
-            <button className="sl-jade" onClick={copy}>Copiar mensaje</button>
-            <button className="sl-ghost" onClick={regen}>Otra versión</button>
-            {toast && <span className="sl-toast">¡Copiado! ✨</span>}
-          </div>
+          <div className="sl-leadhead"><h3>Leads de hoy</h3><button className="sl-ghost" onClick={copyLeads}>Copiar lista</button></div>
+          {leads.length === 0 ? <div className="sl-empty">Todavía no generaste ninguno.</div> :
+              leads.map((l, i) => (
+                  <div key={i} className="sl-lead"><div className="lchip">{l.chip}</div>
+                    <div className="lnm">{l.nm}<small>{l.u || "sin @"} · {l.k}</small></div></div>
+              ))}
         </div>
-      )}
 
-      {/* ---------- LEADS ---------- */}
-      <div className="sl-panel">
-        <div className="sl-leadhead"><h3>Leads de hoy</h3><button className="sl-ghost" onClick={copyLeads}>Copiar lista</button></div>
-        {leads.length === 0 ? <div className="sl-empty">Todavía no generaste ninguno.</div> :
-          leads.map((l, i) => (
-            <div key={i} className="sl-lead"><div className="lchip">{l.chip}</div>
-              <div className="lnm">{l.nm}<small>{l.u || "sin @"} · {l.k}</small></div></div>
-          ))}
+        <footer className="sl-foot">El envío se hace a mano desde tu DM · interpretación fiel al curso · el mensaje cambia solo · <b>€0</b></footer>
       </div>
-
-      <footer className="sl-foot">El envío se hace a mano desde tu DM · interpretación fiel al curso · el mensaje cambia solo · <b>€0</b></footer>
-    </div>
   );
 }
 
@@ -350,6 +460,7 @@ const CSS = `
 .sl button.sl-ghost{background:transparent;color:var(--amatista);border:1.5px solid var(--linea);font-weight:700;font-size:.88rem;padding:10px 16px;border-radius:12px;cursor:pointer}
 .sl-err{font-size:.82rem;color:#c0553f}
 .sl-toast{font-size:.85rem;color:var(--jade);font-weight:700}
+.sl-toast.bad{color:#c0553f}
 .sl-reveal{position:relative;overflow:hidden;border-radius:16px;margin-top:16px;padding:22px;color:#f3effb}
 .sl-reveal.night{background:radial-gradient(120% 120% at 20% 0%,#4a3d7d,#2e2645 55%,#241d38)}
 .sl-reveal.dawn{background:radial-gradient(130% 130% at 82% 0%,#7c5fb0,#5b4a9e 45%,#3a2f63)}
