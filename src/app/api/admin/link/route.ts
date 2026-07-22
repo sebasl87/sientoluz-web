@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
-import { crearTokenLink, emailAdmin } from "@/lib/admin-sesion";
+import { crearTokenLink, esAdmin } from "@/lib/admin-sesion";
 import { emailMagicLink } from "@/lib/emails";
 
 export const runtime = "nodejs";
@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   const { email } = (await req.json().catch(() => ({}))) as { email?: string };
   const pedido = (email ?? "").trim().toLowerCase();
 
-  if (pedido && pedido === emailAdmin()) {
+  if (pedido && esAdmin(pedido)) {
     const url = `${process.env.NEXT_PUBLIC_SITE_URL}/api/admin/entrar?t=${crearTokenLink(pedido)}`;
     const resend = new Resend(process.env.RESEND_API_KEY);
     const { error } = await resend.emails.send({

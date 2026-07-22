@@ -5,7 +5,8 @@ import { cookies } from "next/headers";
  * Sesión del /admin · magic link propio.
  *
  * ── Por qué no Supabase Auth ──
- * Es un panel de UN usuario. Supabase Auth traería: configurar el dashboard
+ * Es un panel de pocos usuarios (los mails van en ADMIN_EMAIL, separados por
+ * coma). Supabase Auth traería: configurar el dashboard
  * (desactivar registros, redirect URLs), SMTP propio para que el mail no
  * salga de un dominio ajeno y no choque con su límite de correos del plan
  * free, y manejo de cookies con @supabase/ssr. Todo eso para autenticar a
@@ -22,8 +23,8 @@ import { cookies } from "next/headers";
  * El token de entrada no es de un solo uso: vive 15 minutos y dentro de esa
  * ventana se puede volver a usar. Hacerlo único requeriría guardar los
  * nonces gastados en la base. Para un link que solo existe en tu casilla,
- * durante 15 minutos, no vale la tabla. Si algún día el panel tiene más de
- * un usuario, esto se cambia por Supabase Auth y listo.
+ * durante 15 minutos, no vale la tabla. Si el panel crece más allá de un
+ * puñado de mails conocidos, esto se cambia por Supabase Auth y listo.
  */
 
 const TOKEN_MIN = 15;
@@ -38,10 +39,25 @@ function secreto(): string {
   return s;
 }
 
-export function emailAdmin(): string {
+function emailsAdmin(): string[] {
   const e = process.env.ADMIN_EMAIL;
   if (!e) throw new Error("ADMIN_EMAIL sin configurar");
-  return e.trim().toLowerCase();
+  const emails = e
+    .split(",")
+    .map((x) => x.trim().toLowerCase())
+    .filter(Boolean);
+  if (emails.length === 0) throw new Error("ADMIN_EMAIL sin configurar");
+  return emails;
+}
+
+/** True si el mail (case-insensitive) está en la lista de admins. */
+export function esAdmin(email: string): boolean {
+  return emailsAdmin().includes(email.trim().toLowerCase());
+}
+
+/** El primer mail admin configurado. Usado como identidad en dev. */
+export function emailAdmin(): string {
+  return emailsAdmin()[0];
 }
 
 const b64 = (b: Buffer) => b.toString("base64url");
@@ -82,7 +98,7 @@ function verificar(tipo: "link" | "sesion", token: string | undefined): string |
     const d = JSON.parse(Buffer.from(cuerpo, "base64url").toString());
     if (d.t !== tipo) return null;
     if (typeof d.exp !== "number" || Date.now() > d.exp) return null;
-    if (typeof d.e !== "string" || d.e !== emailAdmin()) return null;
+    if (typeof d.e !== "string" || !esAdmin(d.e)) return null;
     return d.e;
   } catch {
     return null;
