@@ -18,7 +18,7 @@ type Fecha = {
   camino: number; caminoTotal: number; karmico: number | null;
   dd: number; mm: number; anioCumple: number;
 };
-type Lead = { k: string; chip: string; nm: string; u: string };
+type Lead = { cid: string; k: string; chip: string; nm: string; u: string; saved: "pendiente" | "ok" | "no" };
 type Mode = "camino" | "talento" | "vibra" | "ambos";
 
 /* ---------- Cálculos ---------- */
@@ -271,6 +271,27 @@ export default function GanchosSientoLuz() {
   const [toastOk, setToastOk] = useState(true);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [canal, setCanal] = useState("facebook");
+
+  // Guarda el lead en Supabase vía /api/leads (server). Falla en silencio:
+  // copiar el mensaje es lo crítico; guardar es secundario.
+  const guardarLead = async (
+      payload: { gancho: string; numero: string; nombre: string; usuario: string; canal: string; fecha_nac: string | null },
+      cid: string
+  ) => {
+    try {
+      const r = await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      setLeads((L) => L.map((x) => (x.cid === cid ? { ...x, saved: r.ok ? "ok" : "no" } : x)));
+    } catch {
+      setLeads((L) => L.map((x) => (x.cid === cid ? { ...x, saved: "no" } : x)));
+    }
+  };
+  const nuevoCid = () =>
+      (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()));
 
   const genNombre = () => {
     setErr("");
@@ -279,7 +300,9 @@ export default function GanchosSientoLuz() {
     if (!r.voc.length) { setErr("Ese nombre no tiene vocales reconocibles."); return; }
     setAlma(r);
     setMsg(msgAlma(nombre, r.alma));
-    setLeads((L) => [{ k: "Alma", chip: `A${r.alma}`, nm: nombre.trim(), u: userN.trim() }, ...L]);
+    const cid = nuevoCid();
+    setLeads((L) => [{ cid, k: "Alma", chip: `A${r.alma}`, nm: nombre.trim(), u: userN.trim(), saved: "pendiente" }, ...L]);
+    guardarLead({ gancho: "alma", numero: String(r.alma), nombre: nombre.trim(), usuario: userN.trim(), canal, fecha_nac: null }, cid);
   };
   const genFecha = (m: Mode = mode) => {
     setErr("");
@@ -289,7 +312,10 @@ export default function GanchosSientoLuz() {
     setMsg(msgFecha(fNombre, r, m));
     const etq = m === "camino" ? `C${r.camino}` : m === "talento" ? `T${r.talento}` : m === "vibra" ? `A${r.vib}` : `T${r.talento}·A${r.vib}`;
     const k = m === "camino" ? "Camino" : m === "talento" ? "Talento" : m === "vibra" ? "Año" : "Fecha";
-    setLeads((L) => [{ k, chip: etq, nm: fNombre.trim() || "(sin nombre)", u: userF.trim() }, ...L]);
+    const numero = m === "camino" ? String(r.camino) : m === "talento" ? String(r.talento) : m === "vibra" ? String(r.vib) : `${r.talento}·${r.vib}`;
+    const cid = nuevoCid();
+    setLeads((L) => [{ cid, k, chip: etq, nm: fNombre.trim() || "(sin nombre)", u: userF.trim(), saved: "pendiente" }, ...L]);
+    guardarLead({ gancho: m, numero, nombre: fNombre.trim(), usuario: userF.trim(), canal, fecha_nac: fecha }, cid);
   };
   const regen = () => {
     if (tab === "nombre" && alma) setMsg(msgAlma(nombre, alma.alma));
@@ -339,6 +365,13 @@ export default function GanchosSientoLuz() {
                          onKeyDown={(e) => e.key === "Enter" && genNombre()} placeholder="Ej.: María Luz Gómez Díaz" /></div>
                 <div className="short"><label>@usuario</label>
                   <input value={userN} onChange={(e) => setUserN(e.target.value)} placeholder="@nombre" /></div>
+                <div className="short"><label>Canal</label>
+                  <select value={canal} onChange={(e) => setCanal(e.target.value)}>
+                    <option value="facebook">Facebook</option>
+                    <option value="instagram">Instagram</option>
+                    <option value="grupo_fb">Grupo FB</option>
+                    <option value="otro">Otro</option>
+                  </select></div>
               </div>
               <div className="sl-actions">
                 <button className="sl-primary" onClick={genNombre}>Revelar el Alma ✨</button>
@@ -368,6 +401,13 @@ export default function GanchosSientoLuz() {
                   <input value={fNombre} onChange={(e) => setFNombre(e.target.value)} placeholder="Ej.: María" /></div>
                 <div className="short"><label>@usuario</label>
                   <input value={userF} onChange={(e) => setUserF(e.target.value)} placeholder="@nombre" /></div>
+                <div className="short"><label>Canal</label>
+                  <select value={canal} onChange={(e) => setCanal(e.target.value)}>
+                    <option value="facebook">Facebook</option>
+                    <option value="instagram">Instagram</option>
+                    <option value="grupo_fb">Grupo FB</option>
+                    <option value="otro">Otro</option>
+                  </select></div>
               </div>
 
               <div className="sl-seg">
@@ -420,9 +460,11 @@ export default function GanchosSientoLuz() {
         <div className="sl-panel">
           <div className="sl-leadhead"><h3>Leads de hoy</h3><button className="sl-ghost" onClick={copyLeads}>Copiar lista</button></div>
           {leads.length === 0 ? <div className="sl-empty">Todavía no generaste ninguno.</div> :
-              leads.map((l, i) => (
-                  <div key={i} className="sl-lead"><div className="lchip">{l.chip}</div>
-                    <div className="lnm">{l.nm}<small>{l.u || "sin @"} · {l.k}</small></div></div>
+              leads.map((l) => (
+                  <div key={l.cid} className="sl-lead"><div className="lchip">{l.chip}</div>
+                    <div className="lnm">{l.nm}<small>{l.u || "sin @"} · {l.k}</small></div>
+                    <span className={"lsave " + l.saved}>{l.saved === "ok" ? "guardado ✓" : l.saved === "no" ? "sin guardar" : "guardando…"}</span>
+                  </div>
               ))}
         </div>
 
@@ -447,8 +489,9 @@ const CSS = `
 .sl-panel{background:#fff;border:1px solid var(--linea);border-radius:18px;padding:18px;margin-bottom:18px;box-shadow:0 10px 30px -22px rgba(46,38,69,.5)}
 .sl-sub{font-size:.9rem;color:#6b6480;margin:0 0 14px}
 .sl label{display:block;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--lila);font-weight:700;margin:0 0 6px}
-.sl input,.sl textarea{width:100%;font-family:'Nunito Sans',sans-serif;font-size:1rem;padding:11px 13px;border:1.5px solid var(--linea);border-radius:12px;color:var(--noche);background:#fdfcff}
-.sl input:focus,.sl textarea:focus{outline:none;border-color:var(--lila);box-shadow:0 0 0 4px rgba(138,118,201,.15)}
+.sl input,.sl textarea,.sl select{width:100%;font-family:'Nunito Sans',sans-serif;font-size:1rem;padding:11px 13px;border:1.5px solid var(--linea);border-radius:12px;color:var(--noche);background:#fdfcff}
+.sl select{cursor:pointer}
+.sl input:focus,.sl textarea:focus,.sl select:focus{outline:none;border-color:var(--lila);box-shadow:0 0 0 4px rgba(138,118,201,.15)}
 .sl-row{display:flex;gap:10px;flex-wrap:wrap}
 .sl-row .grow{flex:1 1 190px}.sl-row .short{flex:1 1 110px}
 .sl-seg{display:flex;gap:6px;margin-top:14px;background:#f4f0fb;padding:5px;border-radius:12px;width:fit-content}
@@ -489,6 +532,10 @@ const CSS = `
 .sl-lead:last-child{border-bottom:none}
 .sl-lead .lchip{min-width:48px;height:28px;border-radius:14px;display:grid;place-items:center;font-family:'Josefin Sans',sans-serif;color:#fff;background:var(--lila);font-size:.78rem;padding:0 8px}
 .sl-lead .lnm{flex:1}.sl-lead .lnm small{color:#9a93ac;display:block;font-size:.76rem}
+.sl-lead .lsave{font-size:.72rem;font-weight:700;white-space:nowrap}
+.sl-lead .lsave.ok{color:var(--jade)}
+.sl-lead .lsave.no{color:#b9b2c8}
+.sl-lead .lsave.pendiente{color:#c9a24f}
 .sl-empty{font-size:.88rem;color:#a49dbb;font-style:italic;padding:4px 2px}
 .sl-foot{text-align:center;font-size:.76rem;color:#a49dbb;margin-top:22px}
 .sl-foot b{color:var(--lila)}
