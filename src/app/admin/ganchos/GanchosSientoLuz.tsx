@@ -293,29 +293,33 @@ export default function GanchosSientoLuz() {
   const nuevoCid = () =>
       (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()));
 
-  const genNombre = () => {
+  const genNombre = (autoCopy = false) => {
     setErr("");
     if (nombre.trim().length < 2) { setErr("Escribí el nombre completo."); return; }
     const r = calcAlma(nombre);
     if (!r.voc.length) { setErr("Ese nombre no tiene vocales reconocibles."); return; }
     setAlma(r);
-    setMsg(msgAlma(nombre, r.alma));
+    const texto = msgAlma(nombre, r.alma);
+    setMsg(texto);
     const cid = nuevoCid();
     setLeads((L) => [{ cid, k: "Alma", chip: `A${r.alma}`, nm: nombre.trim(), u: userN.trim(), saved: "pendiente" }, ...L]);
     guardarLead({ gancho: "alma", numero: String(r.alma), nombre: nombre.trim(), usuario: userN.trim(), canal, fecha_nac: null }, cid);
+    if (autoCopy) copiarYAvisar(texto);
   };
-  const genFecha = (m: Mode = mode) => {
+  const genFecha = (m: Mode = mode, autoCopy = false) => {
     setErr("");
     if (!fecha) { setErr("Elegí la fecha de nacimiento."); return; }
     const r = calcFecha(fecha);
     setFres(r); setMode(m);
-    setMsg(msgFecha(fNombre, r, m));
+    const texto = msgFecha(fNombre, r, m);
+    setMsg(texto);
     const etq = m === "camino" ? `C${r.camino}` : m === "talento" ? `T${r.talento}` : m === "vibra" ? `A${r.vib}` : `T${r.talento}·A${r.vib}`;
     const k = m === "camino" ? "Camino" : m === "talento" ? "Talento" : m === "vibra" ? "Año" : "Fecha";
     const numero = m === "camino" ? String(r.camino) : m === "talento" ? String(r.talento) : m === "vibra" ? String(r.vib) : `${r.talento}·${r.vib}`;
     const cid = nuevoCid();
     setLeads((L) => [{ cid, k, chip: etq, nm: fNombre.trim() || "(sin nombre)", u: userF.trim(), saved: "pendiente" }, ...L]);
     guardarLead({ gancho: m, numero, nombre: fNombre.trim(), usuario: userF.trim(), canal, fecha_nac: fecha }, cid);
+    if (autoCopy) copiarYAvisar(texto);
   };
   const regen = () => {
     if (tab === "nombre" && alma) setMsg(msgAlma(nombre, alma.alma));
@@ -332,6 +336,13 @@ export default function GanchosSientoLuz() {
     taRef.current?.focus();
     taRef.current?.select();
     aviso("No pude copiar solo. Te dejé el texto seleccionado: Ctrl/Cmd+C", false);
+  };
+  const copiarYAvisar = async (texto: string) => {
+    const ok = await copiar(texto);
+    if (ok) { aviso("¡Revelado y copiado! ✨", true); return; }
+    taRef.current?.focus();
+    taRef.current?.select();
+    aviso("Revelado. No pude copiar solo: Ctrl/Cmd+C", false);
   };
   const copyLeads = async () => {
     if (!leads.length) return;
@@ -374,7 +385,8 @@ export default function GanchosSientoLuz() {
                   </select></div>
               </div>
               <div className="sl-actions">
-                <button className="sl-primary" onClick={genNombre}>Revelar el Alma ✨</button>
+                <button className="sl-primary" onClick={() => genNombre()}>Revelar el Alma ✨</button>
+                <button className="sl-jade" onClick={() => genNombre(true)}>Revelar y copiar ✨</button>
                 {err && <span className="sl-err">{err}</span>}
               </div>
 
@@ -419,6 +431,7 @@ export default function GanchosSientoLuz() {
 
               <div className="sl-actions">
                 <button className="sl-primary" onClick={() => genFecha()}>Revelar ✨</button>
+                <button className="sl-jade" onClick={() => genFecha(mode, true)}>Revelar y copiar ✨</button>
                 {err && <span className="sl-err">{err}</span>}
               </div>
 
@@ -493,7 +506,8 @@ const CSS = `
 .sl select{cursor:pointer}
 .sl input:focus,.sl textarea:focus,.sl select:focus{outline:none;border-color:var(--lila);box-shadow:0 0 0 4px rgba(138,118,201,.15)}
 .sl-row{display:flex;gap:10px;flex-wrap:wrap}
-.sl-row .grow{flex:1 1 190px}.sl-row .short{flex:1 1 110px}
+.sl-row .grow{flex:1 1 190px;min-width:0}.sl-row .short{flex:1 1 110px;min-width:0}
+.sl input,.sl select{min-width:0}
 .sl-seg{display:flex;gap:6px;margin-top:14px;background:#f4f0fb;padding:5px;border-radius:12px;width:fit-content}
 .sl-seg button{font-family:'Nunito Sans',sans-serif;font-weight:700;font-size:.85rem;cursor:pointer;border:none;background:transparent;color:var(--amatista);padding:7px 14px;border-radius:9px}
 .sl-seg button.on{background:#fff;color:var(--noche);box-shadow:0 2px 8px -3px rgba(46,38,69,.35)}
@@ -539,5 +553,7 @@ const CSS = `
 .sl-empty{font-size:.88rem;color:#a49dbb;font-style:italic;padding:4px 2px}
 .sl-foot{text-align:center;font-size:.76rem;color:#a49dbb;margin-top:22px}
 .sl-foot b{color:var(--lila)}
-@media(max-width:480px){.sl-h1{font-size:1.6rem}.sl-reveal .rnum{font-size:4.5rem}.sl-reveal .card2 .big{font-size:2.9rem}}
+@media(max-width:480px){.sl-h1{font-size:1.6rem}.sl-reveal .rnum{font-size:4.5rem}.sl-reveal .card2 .big{font-size:2.9rem}
+.sl-row{flex-direction:column}.sl-row .grow,.sl-row .short{flex:1 1 auto;width:100%}
+.sl-actions{flex-direction:column;align-items:stretch}.sl-actions button{width:100%}}
 `;
