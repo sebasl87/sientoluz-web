@@ -1,0 +1,66 @@
+# =============================================================
+# SientoLuz AI Stack — Configuración del proyecto
+# Completar antes de ejecutar la primera /sl-posts
+# =============================================================
+
+marca:
+  reference: "sientoluz/marca.md"     # paleta, tipografías, voz, checklist
+  assets: "skills/sl-piezas/assets"   # fuentes estáticas y logos con alpha corregido
+
+contenido:
+  # Dónde viven las tandas. Cada tanda es una carpeta con su spec, previews,
+  # piezas finales y calendario.
+  raiz: "contenido/tandas"
+  context: "contenido/context.md"     # bitácora: qué tandas hay y en qué estado
+
+  # Mezcla de formatos por defecto en una tanda de 10.
+  mezcla:
+    gancho: 2
+    dato: 4
+    ritual: 2
+    frase: 2
+
+publicacion:
+  # El circuito de publicación YA EXISTE en el repo de SientoLuz:
+  # las imágenes van al bucket, se inserta una fila por post, y un cron
+  # de Netlify levanta lo que está vencido y publica en FB e IG.
+  # Este stack NO publica: solo deja la cola cargada.
+  supabase:
+    bucket: "posts-programados"       # bucket público; IG exige URL pública
+    tabla: "posts_programados"
+    # Nombres de las variables de entorno que ya usa el repo.
+    # Si no coinciden, corregilas acá una vez y no se vuelve a preguntar.
+    env_url: "NEXT_PUBLIC_SUPABASE_URL"
+    env_key: "SUPABASE_SERVICE_ROLE_KEY"
+
+  cron:
+    # Expresión de la Scheduled Function de Netlify. Netlify corre en UTC.
+    expresion: "*/15 0,11-14,18-23 * * *"
+    zona_horaria_negocio: "America/Argentina/Buenos_Aires"   # UTC-3
+    # Ventanas efectivas en hora argentina, derivadas de la expresión.
+    # Un post agendado fuera de estas ventanas NO sale a horario:
+    # espera hasta la primera corrida siguiente.
+    ventanas_art:
+      - "08:00-11:59"
+      - "15:00-20:59"
+
+  destinos:
+    - ig
+    - fb
+
+agenda:
+  # El público responde mejor domingo o lunes en esta franja.
+  hora_por_defecto: "20:30"
+  dias_entre_posts: 1
+
+# ------------------------------------------------------------------
+# Anclas de calendario del lanzamiento 2026
+# ------------------------------------------------------------------
+hitos:
+  - fecha: "2026-08-01"
+    nota: "Entrada al mes universal 9 — cierre de ciclos"
+  - fecha: "2026-08-03/2026-08-07"
+    nota: "Semana de calentamiento diario"
+  - fecha: "2026-08-08"
+    hora: "20:30"
+    nota: "Lanzamiento formal sobre el Portal Leonino 8/8"

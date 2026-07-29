@@ -1,8 +1,11 @@
+import { Suspense } from 'react'
 import type { Metadata } from "next";
 import { Josefin_Sans, Nunito_Sans, Cormorant_Garamond } from "next/font/google";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import "./globals.css";
+import { MetaPixel } from '@/components/MetaPixel'
+import { MetaPixelPageView } from '@/components/MetaPixelPageView'
 
 const josefin = Josefin_Sans({
   subsets: ["latin"],
@@ -46,6 +49,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es-AR" className={`${josefin.variable} ${nunito.variable} ${cormorant.variable}`}>
       <body className="flex min-h-screen flex-col">
         <Header />
+        <MetaPixel />
+        <Suspense fallback={null}>
+          <MetaPixelPageView />
+        </Suspense>
         <main className="flex-1">{children}</main>
         <Footer />
       </body>
