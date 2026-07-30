@@ -20,6 +20,11 @@ type Fecha = {
 };
 type Lead = { cid: string; k: string; chip: string; nm: string; u: string; saved: "pendiente" | "ok" | "no" };
 type Mode = "camino" | "talento" | "vibra" | "ambos";
+type Genero = "femenino" | "masculino";
+type LeadHist = {
+  id: number; creado_en: string; gancho: string; numero: string;
+  nombre: string | null; usuario: string | null; canal: string | null; fecha_nac: string | null;
+};
 
 /* ---------- Cálculos ---------- */
 const VAL: Record<string, number> = { a: 1, e: 5, i: 9, o: 6, u: 3 };
@@ -73,7 +78,7 @@ const TALENTO: Record<number, string> = {
   1: "iniciar, arrancar, empuje y fortaleza para atravesar cualquier obstáculo",
   2: "conectar con la intuición, mucha empatía y persistencia para superar lo que venga",
   3: "sos espontánea y muy magnética; vencés los obstáculos con tus propias aptitudes",
-  4: "el gran constructor: disciplina, orden y capacidad para concretar lo que te proponés",
+  4: "la gran constructora: disciplina, orden y capacidad para concretar lo que te proponés",
   5: "magnetismo y poder de convencer; sabés adaptarte, moverte y usar tus encantos",
   6: "paciencia, perdón, aceptación y una gran vocación de servicio y cuidado del otro",
   7: "muy buena administradora de recursos: sabés llevar la economía, ahorrás y no derrochás",
@@ -116,6 +121,42 @@ const CAM_LECCION: Record<number, string> = {
   8: "la vida te va a poner siempre a prueba. Es una vida de muchos aprendizajes: comprender que todo lo que hacemos tiene consecuencias",
   9: "el sentimiento de rechazo o de no ser comprendida por tu círculo más cercano. Tu búsqueda va a ser el reconocimiento",
 };
+
+/* ---------- Variantes en masculino ----------
+   Mismo contenido y fidelidad al curso; solo cambia la concordancia de
+   género de los adjetivos que describen a la persona. Donde el texto ya
+   era neutro (o el adjetivo concuerda con "alma", que es sustantivo
+   femenino más allá de quién lo lea) se omite la entrada acá y se cae al
+   texto base — ver `txt()`. */
+const ALMA_M: Partial<Record<number, string>> = {
+  2: "Tu alma busca armonía y paz por sobre todo. Sos emotivo, tierno, romántico y muy creativo: no necesitás brillar, necesitás vivir tranquilo y en vínculo.",
+  3: "Tu alma se expresa. Es sensible, alegre y comunicativo: viniste a disfrutar los momentos y a compartir con el mundo eso que sentís y creás.",
+  4: "Tu alma busca estabilidad y bases firmes. Sos constructor: necesitás orden, seguridad y algo sólido sobre lo cual sostener tu vida.",
+  6: "Tu alma es protector y entregado. Buscás estabilidad emocional, tu propio hogar y una familia —de sangre o elegida— a la que cuidar.",
+  8: "Tu alma es emprendedor, ambicioso y de gran escala. Viniste a construir proyectos grandes y a materializar tu propia prosperidad.",
+  9: "Tu alma es solidario, idealista y desinteresado. Viniste a brillar y a servir de guía; para vos no hay barreras que te frenen a la hora de ayudar.",
+};
+const TALENTO_M: Partial<Record<number, string>> = {
+  3: "sos espontáneo y muy magnético; vencés los obstáculos con tus propias aptitudes",
+  4: "el gran constructor: disciplina, orden y capacidad para concretar lo que te proponés",
+  7: "muy buen administrador de recursos: sabés llevar la economía, ahorrás y no derrochás",
+  8: "autosuficiente: hacés de lo más mínimo un éxito, gran administrador",
+  9: "muy humano: das mucho y vivís alineado a tus principios",
+};
+const CAM_FUERZA_M: Partial<Record<number, string>> = {
+  2: "sos diplomático, receptivo y mediador. Tenés una conexión finísima con lo intuitivo y sabés unir a la gente",
+  4: "sos el gran constructor: paciente, disciplinado, organizado. Te lleva trabajo concretar, pero lo lográs",
+  5: "libertad y movimiento. Flexible, independiente, magnético: sabés usar tus encantos y reinventarte",
+  8: "autosuficiente y ambicioso del mejor modo: hacés de lo más mínimo un éxito y administrás como pocos",
+  9: "humanitario, compasivo y sabio. Carismático, y das sin esperar nada a cambio",
+};
+const CAM_LECCION_M: Partial<Record<number, string>> = {
+  5: "el amor. No encontrar a la persona adecuada, o sentirte solo estando acompañado. Encontrar ahí el equilibrio",
+  9: "el sentimiento de rechazo o de no ser comprendido por tu círculo más cercano. Tu búsqueda va a ser el reconocimiento",
+};
+function txt(fem: Record<number, string>, masc: Partial<Record<number, string>>, key: number, genero: Genero): string {
+  return genero === "masculino" ? (masc[key] ?? fem[key]) : fem[key];
+}
 
 /* ---------- Banco de mensajes ---------- */
 const pick = <T,>(a: T[]): T => a[Math.floor(Math.random() * a.length)];
@@ -183,14 +224,15 @@ const PUENTE_F = [
   "Tu fecha ya dijo un montón ✨ y todavía falta lo que dice tu nombre. La Carta completa es el corazón del curso de Numerología.",
 ];
 
-function msgAlma(nombre: string, alma: number): string {
+function msgAlma(nombre: string, alma: number, genero: Genero): string {
   const n = primerNombre(nombre);
   const s = pick(SAL_ALMA).replace(/{n}/g, n);
   const r = pick(REV_ALMA).replace(/{a}/g, String(alma));
-  const interp = ALMA[alma] ?? ALMA[reduce9(alma)];
+  const key = ALMA[alma] !== undefined ? alma : reduce9(alma);
+  const interp = txt(ALMA, ALMA_M, key, genero);
   return `${s}\n\n${r}\n\n${interp}\n\n${pick(PUENTE_ALMA)}\n\n${pick(CIERRE)}`;
 }
-function msgFecha(nombre: string, res: Fecha, mode: Mode): string {
+function msgFecha(nombre: string, res: Fecha, mode: Mode, genero: Genero): string {
   const n = primerNombre(nombre);
   const cam = mode === "camino";
   const s = (cam
@@ -201,8 +243,8 @@ function msgFecha(nombre: string, res: Fecha, mode: Mode): string {
   if (cam) {
     const base = reduce9(res.camino);
     bloques.push(pick(REV_CAM).replace(/{c}/g, String(res.camino)));
-    bloques.push(`Dónde está tu fuerza: ${CAM_FUERZA[base]}.`);
-    bloques.push(`Lo que se te repite hasta que lo aprendas: ${CAM_LECCION[base]}.`);
+    bloques.push(`Dónde está tu fuerza: ${txt(CAM_FUERZA, CAM_FUERZA_M, base, genero)}.`);
+    bloques.push(`Lo que se te repite hasta que lo aprendas: ${txt(CAM_LECCION, CAM_LECCION_M, base, genero)}.`);
     if ([11, 22, 33].includes(res.camino)) {
       bloques.push(`Y algo más: el ${res.camino} es un Número Maestro, de vibración muy alta. Para poder usarlo, primero se integra la energía del ${base}.`);
     }
@@ -213,7 +255,7 @@ function msgFecha(nombre: string, res: Fecha, mode: Mode): string {
   }
   if (mode === "talento" || mode === "ambos") {
     bloques.push(pick(REV_TAL).replace(/{t}/g, String(res.talento)));
-    bloques.push(`Tu don (Talento ${res.talento}): ${TALENTO[res.talento]}.`);
+    bloques.push(`Tu don (Talento ${res.talento}): ${txt(TALENTO, TALENTO_M, res.talento, genero)}.`);
   }
   if (mode === "vibra" || mode === "ambos") {
     bloques.push(pick(REV_VIB).replace(/{v}/g, String(res.vib)));
@@ -272,6 +314,19 @@ export default function GanchosSientoLuz() {
   const taRef = useRef<HTMLTextAreaElement>(null);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [canal, setCanal] = useState("facebook");
+  const [genero, setGenero] = useState<Genero>("femenino");
+
+  // Leads anteriores a hoy, guardados en Supabase (no los del estado `leads`,
+  // que solo vive en memoria mientras dura esta sesión del navegador).
+  const ayer = () => {
+    const d = new Date(Date.now() - 86400000);
+    return d.toISOString().slice(0, 10);
+  };
+  const [histDesde, setHistDesde] = useState(ayer);
+  const [histHasta, setHistHasta] = useState(ayer);
+  const [hist, setHist] = useState<LeadHist[] | null>(null);
+  const [histCargando, setHistCargando] = useState(false);
+  const [histErr, setHistErr] = useState("");
 
   // Guarda el lead en Supabase vía /api/leads (server). Falla en silencio:
   // copiar el mensaje es lo crítico; guardar es secundario.
@@ -299,7 +354,7 @@ export default function GanchosSientoLuz() {
     const r = calcAlma(nombre);
     if (!r.voc.length) { setErr("Ese nombre no tiene vocales reconocibles."); return; }
     setAlma(r);
-    const texto = msgAlma(nombre, r.alma);
+    const texto = msgAlma(nombre, r.alma, genero);
     setMsg(texto);
     const cid = nuevoCid();
     setLeads((L) => [{ cid, k: "Alma", chip: `A${r.alma}`, nm: nombre.trim(), u: userN.trim(), saved: "pendiente" }, ...L]);
@@ -311,7 +366,7 @@ export default function GanchosSientoLuz() {
     if (!fecha) { setErr("Elegí la fecha de nacimiento."); return; }
     const r = calcFecha(fecha);
     setFres(r); setMode(m);
-    const texto = msgFecha(fNombre, r, m);
+    const texto = msgFecha(fNombre, r, m, genero);
     setMsg(texto);
     const etq = m === "camino" ? `C${r.camino}` : m === "talento" ? `T${r.talento}` : m === "vibra" ? `A${r.vib}` : `T${r.talento}·A${r.vib}`;
     const k = m === "camino" ? "Camino" : m === "talento" ? "Talento" : m === "vibra" ? "Año" : "Fecha";
@@ -322,8 +377,28 @@ export default function GanchosSientoLuz() {
     if (autoCopy) copiarYAvisar(texto);
   };
   const regen = () => {
-    if (tab === "nombre" && alma) setMsg(msgAlma(nombre, alma.alma));
-    if (tab === "fecha" && fres) setMsg(msgFecha(fNombre, fres, mode));
+    if (tab === "nombre" && alma) setMsg(msgAlma(nombre, alma.alma, genero));
+    if (tab === "fecha" && fres) setMsg(msgFecha(fNombre, fres, mode, genero));
+  };
+  // Si ya hay un mensaje revelado, cambiar de género lo reescribe al toque
+  // en vez de dejar el mensaje viejo mostrando el género anterior.
+  const cambiarGenero = (g: Genero) => {
+    setGenero(g);
+    if (tab === "nombre" && alma) setMsg(msgAlma(nombre, alma.alma, g));
+    if (tab === "fecha" && fres) setMsg(msgFecha(fNombre, fres, mode, g));
+  };
+  const buscarHist = async () => {
+    setHistCargando(true); setHistErr(""); setHist(null);
+    try {
+      const r = await fetch(`/api/leads?desde=${histDesde}&hasta=${histHasta}`);
+      const j = await r.json();
+      if (!r.ok) { setHistErr(j?.error || "No se pudo buscar."); return; }
+      setHist(j.leads);
+    } catch {
+      setHistErr("No se pudo conectar.");
+    } finally {
+      setHistCargando(false);
+    }
   };
   const aviso = (t: string, ok: boolean) => {
     setToast(t); setToastOk(ok);
@@ -365,6 +440,14 @@ export default function GanchosSientoLuz() {
         <div className="sl-tabs">
           <button className={"sl-tab" + (tab === "nombre" ? " on" : "")} onClick={() => { setTab("nombre"); setMsg(""); setErr(""); }}>🌙 Nombre → Alma</button>
           <button className={"sl-tab" + (tab === "fecha" ? " on" : "")} onClick={() => { setTab("fecha"); setMsg(""); setErr(""); }}>☀️ Fecha → Talento + Año</button>
+        </div>
+
+        <div className="sl-genero">
+          <span>Mensaje para</span>
+          <div className="sl-seg">
+            <button className={genero === "femenino" ? "on" : ""} onClick={() => cambiarGenero("femenino")}>Femenino</button>
+            <button className={genero === "masculino" ? "on" : ""} onClick={() => cambiarGenero("masculino")}>Masculino</button>
+          </div>
         </div>
 
         {tab === "nombre" && (
@@ -471,7 +554,7 @@ export default function GanchosSientoLuz() {
         )}
 
         <div className="sl-panel">
-          <div className="sl-leadhead"><h3>Leads de hoy</h3><button className="sl-ghost" onClick={copyLeads}>Copiar lista</button></div>
+          <div className="sl-leadhead"><h3>Leads de esta sesión</h3><button className="sl-ghost" onClick={copyLeads}>Copiar lista</button></div>
           {leads.length === 0 ? <div className="sl-empty">Todavía no generaste ninguno.</div> :
               leads.map((l) => (
                   <div key={l.cid} className="sl-lead"><div className="lchip">{l.chip}</div>
@@ -479,6 +562,31 @@ export default function GanchosSientoLuz() {
                     <span className={"lsave " + l.saved}>{l.saved === "ok" ? "guardado ✓" : l.saved === "no" ? "sin guardar" : "guardando…"}</span>
                   </div>
               ))}
+        </div>
+
+        <div className="sl-panel">
+          <div className="sl-leadhead"><h3>Leads anteriores</h3></div>
+          <p className="sl-sub">Buscá los leads ya guardados en Supabase, de cualquier rango de fechas (no solo los de esta sesión).</p>
+          <div className="sl-row">
+            <div className="short"><label>Desde</label>
+              <input type="date" value={histDesde} onChange={(e) => setHistDesde(e.target.value)} /></div>
+            <div className="short"><label>Hasta</label>
+              <input type="date" value={histHasta} onChange={(e) => setHistHasta(e.target.value)} /></div>
+          </div>
+          <div className="sl-actions">
+            <button className="sl-primary" onClick={buscarHist} disabled={histCargando}>{histCargando ? "Buscando…" : "Buscar"}</button>
+            {histErr && <span className="sl-err">{histErr}</span>}
+          </div>
+          {hist !== null && (
+              hist.length === 0 ? <div className="sl-empty">Ningún lead guardado en ese rango.</div> :
+                  <div className="sl-histlist">
+                    {hist.map((l) => (
+                        <div key={l.id} className="sl-lead"><div className="lchip">{l.gancho}·{l.numero}</div>
+                          <div className="lnm">{l.nombre || "(sin nombre)"}<small>{l.usuario || "sin @"} · {l.canal || "canal ?"} · {new Date(l.creado_en).toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires" })}</small></div>
+                        </div>
+                    ))}
+                  </div>
+          )}
         </div>
 
         <footer className="sl-foot">El envío se hace a mano desde tu DM · interpretación fiel al curso · el mensaje cambia solo · <b>€0</b></footer>
@@ -508,6 +616,10 @@ const CSS = `
 .sl-row{display:flex;gap:10px;flex-wrap:wrap}
 .sl-row .grow{flex:1 1 190px;min-width:0}.sl-row .short{flex:1 1 110px;min-width:0}
 .sl input,.sl select{min-width:0}
+.sl-genero{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+.sl-genero>span{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--lila);font-weight:700}
+.sl-genero .sl-seg{margin-top:0}
+.sl-histlist{margin-top:6px}
 .sl-seg{display:flex;gap:6px;margin-top:14px;background:#f4f0fb;padding:5px;border-radius:12px;width:fit-content}
 .sl-seg button{font-family:'Nunito Sans',sans-serif;font-weight:700;font-size:.85rem;cursor:pointer;border:none;background:transparent;color:var(--amatista);padding:7px 14px;border-radius:9px}
 .sl-seg button.on{background:#fff;color:var(--noche);box-shadow:0 2px 8px -3px rgba(46,38,69,.35)}

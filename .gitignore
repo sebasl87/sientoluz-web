@@ -4,4 +4,7 @@ node_modules/
 next-env.d.ts
 
 # contenido
-/contenido/
+/contenido/*
+contenido/
+./contenido
+
